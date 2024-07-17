@@ -1,0 +1,59 @@
+@page "/"
+@using System.Timers
+
+<PageTitle>Monster Hunter Now Timer</PageTitle>
+
+<div Class="GuildCard">
+    <p>Current Local Time: @localTime UTC Time: @utcTime</p>
+    <p>@CountDownText</p>
+    <p>@WorldCountDownText</p>
+</div>
+<style>
+</style>
+@code {
+    private System.Timers.Timer _timer = null!;
+    
+    private List<int> _monsterHunterRefreshTimesUTC = new () {0, 3, 9, 12, 15, 18, 21};
+    
+    protected TimeSpan nextTime { get; set; } = new TimeSpan(0, 0, 0);
+    
+    protected string CountDownText { get; set; } = "Next monster refresh in";
+    protected string WorldCountDownText { get; set; } = "Next biome refresh in";
+    protected string utcTime { get; set; } = DateTime.UtcNow.ToString();
+    protected string localTime { get; set; } = DateTime.Now.ToString("HH:mm:ss");
+    
+    protected override void OnInitialized()
+    {
+        SetNextTime();
+        
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += OnTimedEvent;
+        _timer.AutoReset = true;
+        _timer.Enabled = true;
+        _timer.Start();
+        Console.WriteLine("Initialized");
+        
+    }
+    
+    //set the nextTime to the next refresh time
+    private void SetNextTime()
+    {
+        var startHour = DateTime.UtcNow.Hour;
+        var nextRefreshHour = _monsterHunterRefreshTimesUTC.FirstOrDefault(x => x > startHour);
+        nextTime = new TimeSpan(nextRefreshHour, 0, 0).Add(new TimeSpan(nextRefreshHour == 0 ? 1 : 0,0,0,0));
+    }
+    
+    private async void OnTimedEvent(object? sender, ElapsedEventArgs e)
+    {
+        // if refresh time has passed, set the nextTime to the next refresh time
+        SetNextTime();
+        
+        utcTime = DateTime.UtcNow.ToString("HH:mm:ss");
+        localTime = DateTime.Now.ToString("HH:mm:ss");
+        CountDownText = $"Next monster refresh in: {(nextTime - DateTime.UtcNow.TimeOfDay):hh\\:mm\\:ss}";
+        WorldCountDownText = $"Next biome refresh in: {(DateTime.UtcNow.Date.AddDays(1) - DateTime.UtcNow ):hh\\:mm\\:ss}";
+        Console.WriteLine($"{nextTime}");
+        await InvokeAsync(StateHasChanged);
+    }
+
+}
